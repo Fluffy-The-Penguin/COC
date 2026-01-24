@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
     const { playerTag } = req.query;
 
-    // FIX: Accept both encoded and non-encoded tags
+    // Validate player tag
     if (!playerTag) {
         return res.status(400).json({
             message: 'Player tag is required',
@@ -36,15 +36,14 @@ export default async function handler(req, res) {
     if (!apiKey) {
         console.error('COC_API_KEY environment variable is not set');
         return res.status(500).json({
-            message: 'Server configuration error',
+            message: 'Server configuration error: API key not configured',
             error: true
         });
     }
 
     try {
-        console.log(`Fetching data for player tag: ${playerTag}`);
-        
-        // FIX: Ensure the tag starts with %23
+        // Ensure the tag is properly formatted for Clash API
+        // Clash API requires %23 instead of # at the beginning
         let formattedTag = playerTag;
         if (!playerTag.startsWith('%23')) {
             if (playerTag.startsWith('#')) {
@@ -54,6 +53,8 @@ export default async function handler(req, res) {
             }
         }
         
+        console.log(`Fetching data for player tag: ${formattedTag}`);
+        
         const response = await fetch(
             `https://api.clashofclans.com/v1/players/${formattedTag}`,
             {
@@ -61,7 +62,9 @@ export default async function handler(req, res) {
                     'Authorization': `Bearer ${apiKey}`,
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
-                }
+                },
+                // Add timeout to prevent hanging requests
+                signal: AbortSignal.timeout(10000)
             }
         );
 
@@ -84,8 +87,9 @@ export default async function handler(req, res) {
         }
 
         const data = await response.json();
-        console.log(`Successfully fetched data for: ${data.name}`);
+        console.log(`Successfully fetched data for: ${data.name} (${data.tag})`);
         
+        // Return successful response
         return res.status(200).json({
             data: data,
             success: true,
