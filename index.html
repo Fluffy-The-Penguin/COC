@@ -916,28 +916,23 @@
             const savedPlayerTag = localStorage.getItem('cocPlayerTag');
             if (savedPlayerTag) {
                 playerTagInput.value = savedPlayerTag;
-                // Auto-select the text for easy replacement
                 playerTagInput.select();
             }
 
-            // Fetch button click
             fetchButton.addEventListener('click', fetchPlayerData);
 
-            // Tab switching
             tabButtons.forEach(button => {
                 button.addEventListener('click', () => switchTab(button.dataset.tab));
             });
 
-            // Enter key in input
             playerTagInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') fetchPlayerData();
             });
 
-            // Focus input on page load
             playerTagInput.focus();
         });
 
-        // ===== API FUNCTIONS =====
+        // ===== FIXED API FUNCTION =====
         async function fetchPlayerData() {
             const playerTag = playerTagInput.value.trim();
 
@@ -954,7 +949,6 @@
                 return;
             }
 
-            // Basic tag format validation
             if (playerTag.length < 4 || playerTag.length > 15) {
                 showError('Player Tag should be between 4 and 15 characters');
                 playerTagInput.focus();
@@ -971,10 +965,11 @@
             localStorage.setItem('cocPlayerTag', playerTag);
 
             try {
-                // Format tag for API (URL encode)
-                const formattedTag = encodeURIComponent(playerTag);
+                // FIX: Properly encode the player tag
+                // Clash API requires %23 instead of #, so we replace # with %23
+                const formattedTag = playerTag.replace('#', '%23');
                 
-                // Call our serverless function (no API key needed from frontend)
+                // Call our serverless function
                 const response = await fetch(
                     `/api/coc-proxy?playerTag=${formattedTag}`,
                     {
@@ -988,7 +983,6 @@
                 const result = await response.json();
 
                 if (!response.ok || result.error) {
-                    // Handle specific error cases
                     let errorMsg = result.message || 'Failed to fetch player data';
                     
                     if (response.status === 404) {
@@ -1033,7 +1027,6 @@
 
         // ===== TAB FUNCTIONS =====
         function switchTab(tabName) {
-            // Update active tab button
             tabButtons.forEach(button => {
                 if (button.dataset.tab === tabName) {
                     button.classList.add('active');
@@ -1042,11 +1035,9 @@
                 }
             });
 
-            // Show selected tab content
             dataSections.forEach(section => {
                 if (section.id === `${tabName}Tab`) {
                     section.style.display = 'block';
-                    // Add fade-in animation
                     section.style.animation = 'fadeIn 0.5s ease';
                 } else {
                     section.style.display = 'none';
@@ -1166,7 +1157,6 @@
             const defenseWinsPercent = Math.min(100, (playerData.defenseWins / 1000) * 100);
             const donationsPercent = Math.min(100, (playerData.donations / 10000) * 100);
             
-            // Get top 6 achievements
             const topAchievements = playerData.achievements && playerData.achievements.length > 0
                 ? playerData.achievements
                     .sort((a, b) => b.value - a.value)
@@ -1406,7 +1396,6 @@
             errorMessage.style.animation = 'fadeIn 0.3s ease';
         }
 
-        // Initialize with saved player tag focused
         window.addEventListener('load', () => {
             if (playerTagInput.value) {
                 playerTagInput.select();
