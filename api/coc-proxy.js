@@ -13,7 +13,6 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    // Only allow GET requests
     if (req.method !== 'GET') {
         return res.status(405).json({ 
             message: 'Method not allowed',
@@ -23,10 +22,10 @@ export default async function handler(req, res) {
 
     const { playerTag } = req.query;
 
-    // Validate player tag
-    if (!playerTag || !playerTag.startsWith('%23')) {
+    // FIX: Accept both encoded and non-encoded tags
+    if (!playerTag) {
         return res.status(400).json({
-            message: 'Invalid player tag format. Use URL encoded format (%23 for #)',
+            message: 'Player tag is required',
             error: true
         });
     }
@@ -45,16 +44,24 @@ export default async function handler(req, res) {
     try {
         console.log(`Fetching data for player tag: ${playerTag}`);
         
+        // FIX: Ensure the tag starts with %23
+        let formattedTag = playerTag;
+        if (!playerTag.startsWith('%23')) {
+            if (playerTag.startsWith('#')) {
+                formattedTag = '%23' + playerTag.slice(1);
+            } else {
+                formattedTag = '%23' + playerTag;
+            }
+        }
+        
         const response = await fetch(
-            `https://api.clashofclans.com/v1/players/${playerTag}`,
+            `https://api.clashofclans.com/v1/players/${formattedTag}`,
             {
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
-                },
-                // Add timeout to prevent hanging requests
-                signal: AbortSignal.timeout(10000)
+                }
             }
         );
 
@@ -79,7 +86,6 @@ export default async function handler(req, res) {
         const data = await response.json();
         console.log(`Successfully fetched data for: ${data.name}`);
         
-        // Return successful response
         return res.status(200).json({
             data: data,
             success: true,
