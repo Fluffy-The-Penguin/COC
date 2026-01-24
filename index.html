@@ -189,6 +189,17 @@
             text-align: center;
         }
 
+        .success-message {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--coc-green);
+            border-radius: 10px;
+            padding: 15px;
+            color: #6EE7B7;
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+
         /* ===== LOADING ===== */
         .loading {
             display: none;
@@ -782,11 +793,11 @@
                 <input 
                     type="text" 
                     id="playerTag" 
-                    placeholder="#ABC123XYZ"
+                    placeholder="#82GJJ9V0V"
                     value=""
                     maxlength="15"
                 >
-                <small>Example: #LGVQCLOQ (include the # symbol)</small>
+                <small>Example: #82GJJ9V0V (include the # symbol)</small>
             </div>
 
             <div class="button-group">
@@ -798,6 +809,11 @@
             <div class="error-message" id="errorMessage">
                 <i class="fas fa-exclamation-triangle"></i>
                 <span id="errorText"></span>
+            </div>
+
+            <div class="success-message" id="successMessage">
+                <i class="fas fa-check-circle"></i>
+                <span id="successText"></span>
             </div>
 
             <div class="loading" id="loading">
@@ -904,6 +920,8 @@
         const fetchButton = document.getElementById('fetchData');
         const errorMessage = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
+        const successMessage = document.getElementById('successMessage');
+        const successText = document.getElementById('successText');
         const loading = document.getElementById('loading');
         const tabs = document.getElementById('tabs');
         const welcomeSection = document.getElementById('welcomeSection');
@@ -932,7 +950,7 @@
             playerTagInput.focus();
         });
 
-        // ===== FIXED API FUNCTION =====
+        // ===== API FUNCTION =====
         async function fetchPlayerData() {
             const playerTag = playerTagInput.value.trim();
 
@@ -958,6 +976,7 @@
             // Show loading
             loading.style.display = 'block';
             errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
             fetchButton.disabled = true;
             fetchButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
 
@@ -965,8 +984,7 @@
             localStorage.setItem('cocPlayerTag', playerTag);
 
             try {
-                // FIX: Properly encode the player tag
-                // Clash API requires %23 instead of #, so we replace # with %23
+                // FIXED: Properly encode the player tag - replace # with %23
                 const formattedTag = playerTag.replace('#', '%23');
                 
                 // Call our serverless function
@@ -988,9 +1006,11 @@
                     if (response.status === 404) {
                         errorMsg = 'Player not found. Please check your Player Tag';
                     } else if (response.status === 403) {
-                        errorMsg = 'API access denied. Please try again later';
+                        errorMsg = 'API access denied. Please check server configuration';
                     } else if (response.status === 429) {
                         errorMsg = 'Too many requests. Please wait a moment and try again';
+                    } else if (response.status === 503) {
+                        errorMsg = 'Service temporarily unavailable';
                     }
                     
                     throw new Error(errorMsg);
@@ -1010,6 +1030,9 @@
                 
                 // Show dashboard by default
                 switchTab('dashboard');
+                
+                // Show success message
+                showSuccess(`Successfully loaded data for ${playerData.name}`);
                 
                 // Smooth scroll to data section
                 tabs.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1394,8 +1417,17 @@
             errorText.textContent = message;
             errorMessage.style.display = 'block';
             errorMessage.style.animation = 'fadeIn 0.3s ease';
+            successMessage.style.display = 'none';
         }
 
+        function showSuccess(message) {
+            successText.textContent = message;
+            successMessage.style.display = 'block';
+            successMessage.style.animation = 'fadeIn 0.3s ease';
+            errorMessage.style.display = 'none';
+        }
+
+        // Auto-focus input on load
         window.addEventListener('load', () => {
             if (playerTagInput.value) {
                 playerTagInput.select();
