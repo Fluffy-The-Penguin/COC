@@ -973,6 +973,13 @@
                 return;
             }
 
+            const normalizedTag = playerTag.toUpperCase();
+            if (!/^#[0289PYLQGRJCUV]+$/.test(normalizedTag)) {
+                showError('Player Tag contains invalid characters');
+                playerTagInput.focus();
+                return;
+            }
+
             // Show loading
             loading.style.display = 'block';
             errorMessage.style.display = 'none';
@@ -981,11 +988,11 @@
             fetchButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
 
             // Save to localStorage
-            localStorage.setItem('cocPlayerTag', playerTag);
+            localStorage.setItem('cocPlayerTag', normalizedTag);
 
             try {
-                // FIXED: Properly encode the player tag - replace # with %23
-                const formattedTag = playerTag.replace('#', '%23');
+                // Encode and normalize the full tag for transport
+                const formattedTag = encodeURIComponent(normalizedTag);
                 
                 // Call our serverless function
                 const response = await fetch(
@@ -1006,7 +1013,10 @@
                     if (response.status === 404) {
                         errorMsg = 'Player not found. Please check your Player Tag';
                     } else if (response.status === 403) {
-                        errorMsg = 'API access denied. Please check server configuration';
+                        errorMsg = result.message || 'API access denied';
+                        if (result.details === 'accessDenied.invalidIp') {
+                            errorMsg += '. Whitelist your server IP in the Clash API dashboard';
+                        }
                     } else if (response.status === 429) {
                         errorMsg = 'Too many requests. Please wait a moment and try again';
                     } else if (response.status === 503) {
