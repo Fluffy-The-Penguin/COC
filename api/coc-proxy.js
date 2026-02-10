@@ -21,9 +21,10 @@ export default async function handler(req, res) {
     }
 
     const { playerTag } = req.query;
+    const playerTagValue = Array.isArray(playerTag) ? playerTag[0] : playerTag;
 
     // Validate player tag
-    if (!playerTag) {
+    if (!playerTagValue || typeof playerTagValue !== 'string') {
         return res.status(400).json({
             message: 'Player tag is required',
             error: true
@@ -42,30 +43,47 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Ensure the tag is properly formatted for Clash API
-        // Clash API requires %23 instead of # at the beginning
-        let formattedTag = playerTag;
-        if (!playerTag.startsWith('%23')) {
-            if (playerTag.startsWith('#')) {
-                formattedTag = '%23' + playerTag.slice(1);
-            } else {
-                formattedTag = '%23' + playerTag;
-            }
+        // Normalize and validate player tag before calling upstream API.
+        // Allowed characters follow Supercell tags: # + [0289PYLQGRJCUV]
+        let normalizedTag;
+        try {
+            normalizedTag = decodeURIComponent(playerTagValue).trim().toUpperCase();
+        } catch {
+            return res.status(400).json({
+                message: 'Invalid player tag format',
+                error: true
+            });
         }
+
+        const rawTag = normalizedTag.startsWith('#') ? normalizedTag.slice(1) : normalizedTag;
+
+        if (!/^[0289PYLQGRJCUV]+$/.test(rawTag)) {
+            return res.status(400).json({
+                message: 'Invalid player tag format',
+                error: true
+            });
+        }
+
+        const formattedTag = `%23${rawTag}`;
         
         console.log(`Fetching data for player tag: ${formattedTag}`);
         
+        const requestOptions = {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        };
+
+        // AbortSignal.timeout is unavailable on some Node runtimes.
+        if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+            requestOptions.signal = AbortSignal.timeout(10000);
+        }
+
         const response = await fetch(
             `https://api.clashofclans.com/v1/players/${formattedTag}`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                // Add timeout to prevent hanging requests
-                signal: AbortSignal.timeout(10000)
-            }
+            requestOptions
         );
 
         if (!response.ok) {
