@@ -90,8 +90,18 @@ export default async function handler(req, res) {
             const errorData = await response.json().catch(() => ({}));
             console.error(`API Error ${response.status}:`, errorData);
             
+            const errorReason = errorData.reason || 'Unknown error';
+
             let errorMessage = 'Failed to fetch player data';
-            if (response.status === 403) errorMessage = 'Invalid API key or access denied';
+            if (response.status === 403) {
+                if (errorReason === 'accessDenied.invalidIp') {
+                    errorMessage = 'API key IP is not whitelisted for Clash of Clans API';
+                } else if (errorReason === 'accessDenied') {
+                    errorMessage = 'API access denied. Check your Clash API key permissions';
+                } else {
+                    errorMessage = 'Invalid API key or access denied';
+                }
+            }
             if (response.status === 404) errorMessage = 'Player not found';
             if (response.status === 429) errorMessage = 'Too many requests, please try again later';
             if (response.status === 503) errorMessage = 'Service temporarily unavailable';
@@ -100,7 +110,7 @@ export default async function handler(req, res) {
                 message: errorMessage,
                 error: true,
                 status: response.status,
-                details: errorData.reason || 'Unknown error'
+                details: errorReason
             });
         }
 

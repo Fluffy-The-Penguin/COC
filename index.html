@@ -1013,7 +1013,10 @@
                     if (response.status === 404) {
                         errorMsg = 'Player not found. Please check your Player Tag';
                     } else if (response.status === 403) {
-                        errorMsg = 'API access denied. Please check server configuration';
+                        errorMsg = result.message || 'API access denied';
+                        if (result.details === 'accessDenied.invalidIp') {
+                            errorMsg += '. Whitelist your server IP in the Clash API dashboard';
+                        }
                     } else if (response.status === 429) {
                         errorMsg = 'Too many requests. Please wait a moment and try again';
                     } else if (response.status === 503) {
